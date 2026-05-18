@@ -4,18 +4,21 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "dev:frontend": "vite",
+    "dev": "next dev",
+    "dev:frontend": "next dev",
     "dev:backend": "tsx watch server/src/index.ts",
-    "build": "tsc && vite build",
+    "dev:all": "concurrently \"npm run dev\" \"npm run dev:backend\"",
+    "build": "next build",
+    "build:web": "next build",
     "build:backend": "tsc -p server/tsconfig.json",
-    "preview": "vite preview"
+    "preview": "next start"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "firebase-admin": "^11.10.0",
     "morgan": "^1.10.0",
+    "next": "^15.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "stripe": "^12.3.0",
@@ -28,13 +31,12 @@
     "@types/node": "^20.14.2",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
-    "@vitejs/plugin-react-swc": "^3.6.0",
     "autoprefixer": "^10.4.19",
     "postcss": "^8.4.36",
     "tailwindcss": "^3.4.4",
     "ts-node-dev": "^2.0.0",
+    "concurrently": "^8.2.0",
     "tsx": "^3.12.7",
-    "typescript": "^5.6.2",
-    "vite": "^5.4.1"
+    "typescript": "^5.6.2"
   }
 }

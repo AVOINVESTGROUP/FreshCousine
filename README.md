@@ -1,6 +1,6 @@
 # FreshAI Dubai
 
-Минимальный фронтенд-прототип по дизайну `index (13).html`.
+Customer PWA реализован на Next.js + TypeScript в соответствии с архитектурой ТЗ.
 
 ## Запуск
 
@@ -8,7 +8,7 @@
    ```bash
    npm install
    ```
-2. Запустите разработку:
+2. Запустите frontend:
    ```bash
    npm run dev
    ```
@@ -17,7 +17,7 @@
 ## Сборка
 
 ```bash
-npm run build
+npm run build:web
 ```
 
 ## Backend
@@ -41,7 +41,7 @@ SEED_DATA=true npm run dev:backend
 
 ## Структура
 
-- `index.html` — шаблон приложения
-- `src/App.tsx` — основной UI и логика
-- `src/index.css` — Tailwind + стили
+- `app/` — Next.js Customer PWA
+- `app/globals.css` — глобальные стили
+- `src/App.tsx` — основной UI и логика компонента
 - `server/src` — backend Express / Firestore / Stripe

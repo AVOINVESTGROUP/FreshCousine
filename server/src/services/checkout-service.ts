@@ -1,9 +1,9 @@
 import type { AuthorizeRequest } from '../validators/checkout.js';
 import { AppError, ERROR_CODES } from '../lib/errors.js';
-import { collection } from '../lib/firestore.js';
+import { collection, db } from '../lib/firestore.js';
 import { nowIso, generateId } from '../lib/utils.js';
 import { stripe, isStripeEnabled } from '../lib/stripe.js';
-import type { Order, OrderItem, Payment, Quote } from '../types/models.js';
+import type { IdempotencyRecord, Order, OrderItem, Payment, Quote } from '../types/models.js';
 
 export class CheckoutService {
   async authorizePayment(userId: string, payload: AuthorizeRequest) {
@@ -68,54 +68,94 @@ export class CheckoutService {
       updatedAt: nowIso()
     };
 
-    const paymentId = generateId('payment');
-    let providerPaymentIntentId = `pi_stub_${paymentId}`;
-    let clientSecret = 'test_client_secret';
+    const keyRef = collection<IdempotencyRecord>('idempotency_keys').doc(payload.idempotencyKey);
 
-    if (isStripeEnabled() && stripe) {
-      try {
-        const intent = await stripe.paymentIntents.create({
-          amount: quote.maxAuthorizedAmountMinor,
-          currency: 'aed',
-          capture_method: 'manual',
-          payment_method_types: ['card'],
-          metadata: {
-            quoteId: quote.quoteId,
-            orderId
-          }
-        });
-        providerPaymentIntentId = intent.id;
-        clientSecret = intent.client_secret ?? 'missing_client_secret';
-      } catch (error) {
-        throw new AppError(ERROR_CODES.AUTHORIZATION_FAILED, 502, 'errors.authorizationFailed', 'Stripe authorization failed', error);
+    const response = await db.runTransaction(async transaction => {
+      const existingKey = await transaction.get(keyRef);
+      if (existingKey.exists) {
+        const record = existingKey.data() as IdempotencyRecord;
+        if (record.quoteId !== payload.quoteId) {
+          throw new AppError(ERROR_CODES.IDEMPOTENCY_CONFLICT, 409, 'errors.idempotencyConflict', 'Idempotency key conflict with a different quote');
+        }
+
+        return record.responsePayload;
       }
-    }
 
-    const payment: Payment = {
-      paymentId,
-      orderId,
-      provider: 'stripe',
-      providerPaymentIntentId,
-      status: 'AUTHORIZATION_PENDING',
-      authorizedAmountMinor: quote.maxAuthorizedAmountMinor,
-      currency: 'AED',
-      createdAt: nowIso(),
-      updatedAt: nowIso()
-    };
+      const paymentId = generateId('payment');
+      let providerPaymentIntentId = `pi_stub_${paymentId}`;
+      let clientSecret = 'test_client_secret';
 
-    await collection<Order>('orders').doc(orderId).set(order);
-    await collection<Payment>('payments').doc(paymentId).set(payment);
-    await collection<Quote>('quotes').doc(quote.quoteId).update({
-      status: 'USED',
-      usedAt: nowIso(),
-      updatedAt: nowIso()
+      if (isStripeEnabled() && stripe) {
+        try {
+          const intent = await stripe.paymentIntents.create({
+            amount: quote.maxAuthorizedAmountMinor,
+            currency: 'aed',
+            capture_method: 'manual',
+            payment_method_types: ['card'],
+            metadata: {
+              quoteId: quote.quoteId,
+              orderId
+            }
+          });
+          providerPaymentIntentId = intent.id;
+          clientSecret = intent.client_secret ?? 'missing_client_secret';
+        } catch (error) {
+          throw new AppError(ERROR_CODES.AUTHORIZATION_FAILED, 502, 'errors.authorizationFailed', 'Stripe authorization failed', error);
+        }
+      }
+
+      const payment: Payment = {
+        paymentId,
+        orderId,
+        provider: 'stripe',
+        providerPaymentIntentId,
+        status: 'AUTHORIZATION_PENDING',
+        authorizedAmountMinor: quote.maxAuthorizedAmountMinor,
+        currency: 'AED',
+        createdAt: nowIso(),
+        updatedAt: nowIso()
+      };
+
+      transaction.set(collection<Order>('orders').doc(orderId), order);
+      transaction.set(collection<Payment>('payments').doc(paymentId), payment);
+      transaction.update(collection<Quote>('quotes').doc(quote.quoteId), {
+        status: 'USED',
+        usedAt: nowIso(),
+        updatedAt: nowIso()
+      });
+
+      const record: IdempotencyRecord = {
+        idempotencyKey: payload.idempotencyKey,
+        userId,
+        quoteId: payload.quoteId,
+        orderId,
+        responsePayload: {
+          orderId,
+          clientSecret,
+          paymentIntentId: providerPaymentIntentId,
+          authorizedAmountMinor: quote.maxAuthorizedAmountMinor
+        },
+        createdAt: nowIso()
+      };
+
+      transaction.set(keyRef, record);
+
+      const eventRef = collection<Order>('orders').doc(orderId).collection('events').doc(generateId('event'));
+      transaction.set(eventRef, {
+        type: 'payment_authorization_created',
+        actorType: 'system',
+        actorId: 'system',
+        payload: {
+          quoteId: quote.quoteId,
+          orderId,
+          authorizedAmountMinor: quote.maxAuthorizedAmountMinor
+        },
+        createdAt: nowIso()
+      });
+
+      return record.responsePayload;
     });
 
-    return {
-      orderId,
-      clientSecret,
-      paymentIntentId: providerPaymentIntentId,
-      authorizedAmountMinor: quote.maxAuthorizedAmountMinor
-    };
+    return response;
   }
 }

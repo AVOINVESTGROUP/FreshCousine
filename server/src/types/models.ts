@@ -199,10 +199,16 @@ export interface Payment {
   updatedAt: string;
 }
 
-export interface QuoteRequestItem {
-  marketProductId: string;
-  productId: string;
-  requestedQty: number;
-  requestedUnit: string;
-  substitutionAllowed: boolean;
+export interface IdempotencyRecord {
+  idempotencyKey: string;
+  userId: string;
+  quoteId: string;
+  orderId: string;
+  responsePayload: {
+    orderId: string;
+    clientSecret: string;
+    paymentIntentId: string;
+    authorizedAmountMinor: number;
+  };
+  createdAt: string;
 }
