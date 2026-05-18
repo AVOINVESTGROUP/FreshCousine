@@ -1,0 +1,80 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  font-family: 'Inter', system-ui, sans-serif;
+  --primary: #059669;
+}
+
+html, body, #root {
+  min-height: 100%;
+}
+
+body {
+  background: #09090b;
+  color: #e5e7eb;
+}
+
+.logo-font {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-weight: 700;
+}
+
+.product-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.product-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+.section-header {
+  font-size: 2.25rem;
+  line-height: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.ai-badge {
+  background: linear-gradient(90deg, #059669, #10b981);
+  color: white;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  font-weight: 600;
+}
+
+.recipe-card {
+  transition: all 0.3s ease;
+}
+
+.fresh-green {
+  color: #059669;
+}
+
+.hero-bg {
+  background-image: linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.35)), url('https://picsum.photos/id/1083/2000/1200');
+  background-size: cover;
+  background-position: center;
+}
+
+.product-img {
+  height: 180px;
+  object-fit: cover;
+}
+
+.stat-number {
+  font-variant-numeric: tabular-nums;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
